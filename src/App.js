@@ -5,11 +5,15 @@ import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
 import './App.css';
 
+const fonts = ['Arial', 'Verdana', 'Times New Roman', 'Courier New', 'Georgia'];
+
 const App = () => {
   const [headers, setHeaders] = useState([]);
   const [rows, setRows] = useState([]);
   const [positions, setPositions] = useState({});
   const [rotations, setRotations] = useState({});
+  const [fontFamilies, setFontFamilies] = useState({});
+  const [fontSizes, setFontSizes] = useState({});
   const [selectedHeader, setSelectedHeader] = useState(null);
   const [uploadedImages, setUploadedImages] = useState([]);
   const [imagePositions, setImagePositions] = useState({});
@@ -49,11 +53,31 @@ const App = () => {
     }));
   };
 
-  const handleRotationChange = (angle, header) => {
-    setRotations((prevRotations) => ({
-      ...prevRotations,
-      [header]: angle,
-    }));
+  const handleRotationChange = (angle) => {
+    if (selectedHeader) {
+      setRotations((prevRotations) => ({
+        ...prevRotations,
+        [selectedHeader]: angle,
+      }));
+    }
+  };
+
+  const handleFontFamilyChange = (fontFamily) => {
+    if (selectedHeader) {
+      setFontFamilies((prevFontFamilies) => ({
+        ...prevFontFamilies,
+        [selectedHeader]: fontFamily,
+      }));
+    }
+  };
+
+  const handleFontSizeChange = (fontSize) => {
+    if (selectedHeader) {
+      setFontSizes((prevFontSizes) => ({
+        ...prevFontSizes,
+        [selectedHeader]: fontSize,
+      }));
+    }
   };
 
   const handleHeaderClick = (header) => {
@@ -125,8 +149,12 @@ const App = () => {
       headers.forEach((header) => {
         const position = positions[header] || { x: 50, y: 50 }; // Default position
         const rotation = rotations[header] || 0;
+        const fontFamily = fontFamilies[header] || 'Arial';
+        const fontSize = fontSizes[header] || 12;
         const text = `${header}: ${row[header] || ''}`;
 
+        pdf.setFont(fontFamily);
+        pdf.setFontSize(fontSize);
         pdf.text(text, position.x, position.y, { angle: rotation });
       });
 
@@ -142,6 +170,8 @@ const App = () => {
     const settings = {
       positions,
       rotations,
+      fontFamilies,
+      fontSizes,
       uploadedImages,
       imagePositions,
       imageSizes,
@@ -152,11 +182,13 @@ const App = () => {
   const loadSettings = () => {
     const savedSettings = localStorage.getItem('layoutSettings');
     if (savedSettings) {
-      const { positions, rotations, uploadedImages, imagePositions, imageSizes } = JSON.parse(
+      const { positions, rotations, fontFamilies, fontSizes, uploadedImages, imagePositions, imageSizes } = JSON.parse(
         savedSettings
       );
       setPositions(positions);
       setRotations(rotations);
+      setFontFamilies(fontFamilies || {});
+      setFontSizes(fontSizes || {});
       setUploadedImages(uploadedImages || []);
       setImagePositions(imagePositions || {});
       setImageSizes(imageSizes || {});
@@ -190,19 +222,40 @@ const App = () => {
                       className="draggable-item"
                       style={{
                         transform: `rotate(${rotations[header] || 0}deg)`,
+                        fontFamily: fontFamilies[header] || 'Arial',
+                        fontSize: `${fontSizes[header] || 12}px`,
                       }}
                     >
                       {header}
                     </div>
                   </Draggable>
                   {selectedHeader === header && (
-                    <input
-                      type="number"
-                      value={rotations[header] || 0}
-                      onChange={(e) => handleRotationChange(parseFloat(e.target.value), header)}
-                      className="rotation-input"
-                      placeholder="Rotation (deg)"
-                    />
+                    <div className="header-settings">
+                      <select
+                        onChange={(e) => handleFontFamilyChange(e.target.value)}
+                        value={fontFamilies[header] || 'Arial'}
+                      >
+                        {fonts.map((font) => (
+                          <option key={font} value={font}>
+                            {font}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        value={fontSizes[header] || 12}
+                        onChange={(e) => handleFontSizeChange(parseFloat(e.target.value))}
+                        className="font-size-input"
+                        placeholder="Font Size"
+                      />
+                      <input
+                        type="number"
+                        value={rotations[header] || 0}
+                        onChange={(e) => handleRotationChange(parseFloat(e.target.value))}
+                        className="rotation-input"
+                        placeholder="Rotation (deg)"
+                      />
+                    </div>
                   )}
                 </div>
               ))}
@@ -212,7 +265,7 @@ const App = () => {
             <Draggable
               key={index}
               onStop={(e, data) => {
-                setImagePositions((prevPositions) => ({
+                setImagePositions(prevPositions => ({
                   ...prevPositions,
                   [index]: { x: data.x, y: data.y },
                 }));
@@ -230,8 +283,8 @@ const App = () => {
                     className="uploaded-image"
                   />
                   <button
-                    onClick={() => handleImageRemove(index)}
                     className="remove-image-button"
+                    onClick={() => handleImageRemove(index)}
                   >
                     Remove
                   </button>

@@ -48,13 +48,13 @@
 }
 
 
-.rotation-input {
+/* .rotation-input {
   width: 80px;
   padding: 5px;
   border-radius: 3px;
   border: 1px solid #ccc;
   margin-top: 10px;
-}
+} */
 
 .export-button,
 .save-button {
@@ -77,4 +77,27 @@
   padding: 20px;
   border-radius: 5px;
   z-index: 1000;
+}
+
+.header-settings {
+  margin-top: 10px;
+}
+
+.header-settings select,
+.header-settings input {
+  margin-right: 10px;
+}
+
+.font-size-input {
+  width: 60px;
+  padding: 5px;
+  border-radius: 3px;
+  border: 1px solid #ccc;
+}
+
+.rotation-input {
+  width: 80px;
+  padding: 5px;
+  border-radius: 3px;
+  border: 1px solid #ccc;
 }

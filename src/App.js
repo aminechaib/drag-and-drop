@@ -15,7 +15,6 @@ const App = () => {
   const [imagePositions, setImagePositions] = useState({});
   const [imageSizes, setImageSizes] = useState({});
   const [pdfReady, setPdfReady] = useState(false);
-
   useEffect(() => {
     loadSettings();
   }, []);

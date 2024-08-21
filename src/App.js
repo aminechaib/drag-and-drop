@@ -5,7 +5,7 @@ import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
 import './App.css';
 
-const fonts = ['Arial', 'Verdana', 'Times New Roman', 'Courier New', 'Georgia'];
+const fonts = ['Arial', 'Verdana', 'Times New Roman', 'Courier New', 'Georgia', 'Amiri'];
 
 const App = () => {
   const [headers, setHeaders] = useState([]);
@@ -130,42 +130,31 @@ const App = () => {
       unit: 'px',
       format: [794, 1123], // A4 size in pixels
     });
-
+  
     rows.forEach((row, rowIndex) => {
-      // Render images on each page
-      uploadedImages.forEach((imageSrc, index) => {
-        const size = imageSizes[index] || { width: '100px', height: '100px' };
-        pdf.addImage(
-          imageSrc,
-          'PNG',
-          parseFloat(imagePositions[index]?.x || 0),
-          parseFloat(imagePositions[index]?.y || 0),
-          parseFloat(size.width),
-          parseFloat(size.height)
-        );
-      });
-
-      // Render headers and row data on each page
+      // Add the custom font to the PDF
+      pdf.addFileToVFS('Amiri.ttf', /* Your base64 encoded font data here */);
+      pdf.addFont('fonts/Amiri.ttf', 'Amiri', 'normal');
+  
+      // Add text with the custom font
       headers.forEach((header) => {
         const position = positions[header] || { x: 50, y: 50 }; // Default position
         const rotation = rotations[header] || 0;
         const fontFamily = fontFamilies[header] || 'Arial';
         const fontSize = fontSizes[header] || 12;
         const text = `${header}: ${row[header] || ''}`;
-
+  
         pdf.setFont(fontFamily);
         pdf.setFontSize(fontSize);
         pdf.text(text, position.x, position.y, { angle: rotation });
       });
-
-      // Add a new page if it's not the last row
+  
       if (rowIndex < rows.length - 1) {
         pdf.addPage();
       }
     });
     pdf.save('download.pdf');
   };
-
   const saveSettings = () => {
     const settings = {
       positions,
@@ -229,34 +218,6 @@ const App = () => {
                       {header}
                     </div>
                   </Draggable>
-                  {selectedHeader === header && (
-                    <div className="header-settings">
-                      <select
-                        onChange={(e) => handleFontFamilyChange(e.target.value)}
-                        value={fontFamilies[header] || 'Arial'}
-                      >
-                        {fonts.map((font) => (
-                          <option key={font} value={font}>
-                            {font}
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        type="number"
-                        value={fontSizes[header] || 12}
-                        onChange={(e) => handleFontSizeChange(parseFloat(e.target.value))}
-                        className="font-size-input"
-                        placeholder="Font Size"
-                      />
-                      <input
-                        type="number"
-                        value={rotations[header] || 0}
-                        onChange={(e) => handleRotationChange(parseFloat(e.target.value))}
-                        className="rotation-input"
-                        placeholder="Rotation (deg)"
-                      />
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
@@ -293,6 +254,31 @@ const App = () => {
             </Draggable>
           ))}
         </div>
+        {selectedHeader && (
+          <div className="header-settings">
+            <input
+              type="number"
+              onChange={(e) => handleRotationChange(parseFloat(e.target.value))}
+              className="rotation-input"
+              placeholder="Rotation (deg)"
+            />
+            <select
+              onChange={(e) => handleFontFamilyChange(e.target.value)}
+              defaultValue={fontFamilies[selectedHeader] || 'Arial'}
+            >
+              {fonts.map((font) => (
+                <option key={font} value={font}>{font}</option>
+              ))}
+            </select>
+            <input
+              type="number"
+              onChange={(e) => handleFontSizeChange(parseFloat(e.target.value))}
+              className="font-size-input"
+              placeholder="Font Size (px)"
+              defaultValue={fontSizes[selectedHeader] || 12}
+            />
+          </div>
+        )}
         {pdfReady && (
           <div>
             <button onClick={exportToPDF} className="export-button">

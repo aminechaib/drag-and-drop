@@ -10,11 +10,12 @@ const App = () => {
   const [rows, setRows] = useState([]);
   const [positions, setPositions] = useState({});
   const [rotations, setRotations] = useState({});
-  const [selectedHeaders, setSelectedHeaders] = useState([]);
+  const [selectedHeader, setSelectedHeader] = useState(null);
   const [uploadedImages, setUploadedImages] = useState([]);
   const [imagePositions, setImagePositions] = useState({});
   const [imageSizes, setImageSizes] = useState({});
   const [pdfReady, setPdfReady] = useState(false);
+
   useEffect(() => {
     loadSettings();
   }, []);
@@ -48,24 +49,15 @@ const App = () => {
     }));
   };
 
-  const handleRotationChange = (angle) => {
-    setRotations((prevRotations) => {
-      const newRotations = { ...prevRotations };
-      selectedHeaders.forEach((header) => {
-        newRotations[header] = angle;
-      });
-      return newRotations;
-    });
+  const handleRotationChange = (angle, header) => {
+    setRotations((prevRotations) => ({
+      ...prevRotations,
+      [header]: angle,
+    }));
   };
 
   const handleHeaderClick = (header) => {
-    setSelectedHeaders((prevSelected) => {
-      if (prevSelected.includes(header)) {
-        return prevSelected.filter((h) => h !== header);
-      } else {
-        return [...prevSelected, header];
-      }
-    });
+    setSelectedHeader(header === selectedHeader ? null : header);
   };
 
   const handleImageUpload = (event) => {
@@ -85,6 +77,20 @@ const App = () => {
     }
   };
 
+  const handleImageRemove = (index) => {
+    setUploadedImages((prevImages) => prevImages.filter((_, i) => i !== index));
+    setImagePositions((prevPositions) => {
+      const updatedPositions = { ...prevPositions };
+      delete updatedPositions[index];
+      return updatedPositions;
+    });
+    setImageSizes((prevSizes) => {
+      const updatedSizes = { ...prevSizes };
+      delete updatedSizes[index];
+      return updatedSizes;
+    });
+  };
+
   const handleResize = (event, direction, ref, index) => {
     setImageSizes((prevSizes) => ({
       ...prevSizes,
@@ -100,7 +106,7 @@ const App = () => {
       unit: 'px',
       format: [794, 1123], // A4 size in pixels
     });
-  
+
     rows.forEach((row, rowIndex) => {
       // Render images on each page
       uploadedImages.forEach((imageSrc, index) => {
@@ -114,16 +120,16 @@ const App = () => {
           parseFloat(size.height)
         );
       });
-  
+
       // Render headers and row data on each page
       headers.forEach((header) => {
         const position = positions[header] || { x: 50, y: 50 }; // Default position
         const rotation = rotations[header] || 0;
         const text = `${header}: ${row[header] || ''}`;
-  
+
         pdf.text(text, position.x, position.y, { angle: rotation });
       });
-  
+
       // Add a new page if it's not the last row
       if (rowIndex < rows.length - 1) {
         pdf.addPage();
@@ -131,7 +137,6 @@ const App = () => {
     });
     pdf.save('download.pdf');
   };
-    
 
   const saveSettings = () => {
     const settings = {
@@ -173,7 +178,7 @@ const App = () => {
                   onClick={() => handleHeaderClick(header)}
                   style={{
                     position: 'relative',
-                    border: selectedHeaders.includes(header) ? '2px solid red' : 'none',
+                    border: selectedHeader === header ? '2px solid red' : 'none',
                     cursor: 'pointer',
                   }}
                 >
@@ -190,45 +195,51 @@ const App = () => {
                       {header}
                     </div>
                   </Draggable>
+                  {selectedHeader === header && (
+                    <input
+                      type="number"
+                      value={rotations[header] || 0}
+                      onChange={(e) => handleRotationChange(parseFloat(e.target.value), header)}
+                      className="rotation-input"
+                      placeholder="Rotation (deg)"
+                    />
+                  )}
                 </div>
               ))}
             </div>
           )}
-        {uploadedImages.map((imageSrc, index) => (
-  <Draggable
-    key={index}
-    onStop={(e, data) => {
-      setImagePositions(prevPositions => ({
-        ...prevPositions,
-        [index]: { x: data.x, y: data.y },
-      }));
-    }}
-    defaultPosition={imagePositions[index] || { x: 0, y: 0 }}
-  >
-    <Resizable
-      size={imageSizes[index] || { width: '100px', height: '100px' }}
-      onResizeStop={(e, direction, ref) => handleResize(e, direction, ref, index)}
-    >
-      <img
-        src={imageSrc}
-        alt={`uploaded-${index}`}
-        className="uploaded-image"
-      />
-    </Resizable>
-  </Draggable>
-))}
-
+          {uploadedImages.map((imageSrc, index) => (
+            <Draggable
+              key={index}
+              onStop={(e, data) => {
+                setImagePositions((prevPositions) => ({
+                  ...prevPositions,
+                  [index]: { x: data.x, y: data.y },
+                }));
+              }}
+              defaultPosition={imagePositions[index] || { x: 0, y: 0 }}
+            >
+              <Resizable
+                size={imageSizes[index] || { width: '100px', height: '100px' }}
+                onResizeStop={(e, direction, ref) => handleResize(e, direction, ref, index)}
+              >
+                <div style={{ position: 'relative' }}>
+                  <img
+                    src={imageSrc}
+                    alt={`uploaded-${index}`}
+                    className="uploaded-image"
+                  />
+                  <button
+                    onClick={() => handleImageRemove(index)}
+                    className="remove-image-button"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </Resizable>
+            </Draggable>
+          ))}
         </div>
-        {selectedHeaders.length > 0 && (
-          <div>
-            <input
-              type="number"
-              onChange={(e) => handleRotationChange(parseFloat(e.target.value))}
-              className="rotation-input"
-              placeholder="Rotation (deg)"
-            />
-          </div>
-        )}
         {pdfReady && (
           <div>
             <button onClick={exportToPDF} className="export-button">

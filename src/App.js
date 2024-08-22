@@ -5,6 +5,7 @@ import { Resizable } from "re-resizable";
 import * as XLSX from "xlsx";
 import "./App.css";
 import base64String from './fonts/Amiri.txt';
+import JsBarcode from "jsbarcode";
 
 const AMIRI_BASE64 = base64String.trim();
 
@@ -202,47 +203,64 @@ const App = () => {
       },
     }));
   };
+const exportToPDF = () => {
+  const pdf = new jsPDF({
+    unit: "px",
+    format: [794, 1123], // A4 size in pixels
+  });
+  addAmiriFont(pdf); // Add Amiri font to PDF
+  pdf.setFont("Amiri"); // Set default font to Amiri
 
-  const exportToPDF = () => {
-    const pdf = new jsPDF({
-      unit: "px",
-      format: [794, 1123], // A4 size in pixels
+  rows.forEach((row, rowIndex) => {
+    uploadedImages.forEach((imageSrc, index) => {
+      const size = imageSizes[index] || { width: "100px", height: "100px" };
+      pdf.addImage(
+        imageSrc,
+        "PNG",
+        parseFloat(imagePositions[index]?.x || 0),
+        parseFloat(imagePositions[index]?.y || 0),
+        parseFloat(size.width),
+        parseFloat(size.height)
+      );
     });
-    addAmiriFont(pdf); // Add Amiri font to PDF
-    pdf.setFont("Amiri"); // Set default font to Amiri
 
-    rows.forEach((row, rowIndex) => {
-      uploadedImages.forEach((imageSrc, index) => {
-        const size = imageSizes[index] || { width: "100px", height: "100px" };
+    headers.forEach((header) => {
+      const position = positions[header] || { x: 50, y: 50 };
+      const rotation = rotations[header] || 0;
+      const fontFamily = fontFamilies[header] || "Amiri";
+      const fontSize = fontSizes[header] || 16;
+
+      pdf.setFont(fontFamily);
+      pdf.setFontSize(fontSize);
+
+      if (header === "barcode" && row[header]) {
+        // Create a canvas to draw the barcode
+        const canvas = document.createElement("canvas");
+        JsBarcode(canvas, row[header], { format: "CODE128" });
+
+        // Convert the canvas to an image and add it to the PDF
+        const barcodeImage = canvas.toDataURL("image/png");
         pdf.addImage(
-          imageSrc,
+          barcodeImage,
           "PNG",
-          parseFloat(imagePositions[index]?.x || 0),
-          parseFloat(imagePositions[index]?.y || 0),
-          parseFloat(size.width),
-          parseFloat(size.height)
+          position.x,
+          position.y,
+          100, // Set width of the barcode
+          50 // Set height of the barcode
         );
-      });
-
-      headers.forEach((header) => {
-        const position = positions[header] || { x: 50, y: 50 };
-        const rotation = rotations[header] || 0;
+      } else {
         const text = `${header}: ${row[header] || ""}`;
-        const fontFamily = fontFamilies[header] || "Amiri";
-        const fontSize = fontSizes[header] || 16;
-
-        pdf.setFont(fontFamily);
-        pdf.setFontSize(fontSize);
         pdf.text(text, position.x, position.y, { angle: rotation });
-      });
-
-      if (rowIndex < rows.length - 1) {
-        pdf.addPage();
       }
     });
 
-    pdf.save("download.pdf");
-  };
+    if (rowIndex < rows.length - 1) {
+      pdf.addPage();
+    }
+  });
+
+  pdf.save("download.pdf");
+};
 
   const saveSettings = () => {
     const settings = {

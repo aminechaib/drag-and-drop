@@ -17,16 +17,7 @@
   width: 794px; /* A4 width in pixels */
   height: 1123px; /* A4 height in pixels */
   position: relative;
-  border: 2px solid #ccc;
-  background-color: #f5f5f5;
-  overflow: hidden;
-  aspect-ratio: 794 / 1123;
-}
-.a4-area {
-  max-width: 794px; 
-  height: auto;
-  position: relative;
-  border: 2px solid #ccc;
+  border: 2px solid #101010;
   background-color: #f5f5f5;
   overflow: hidden;
   aspect-ratio: 794 / 1123;

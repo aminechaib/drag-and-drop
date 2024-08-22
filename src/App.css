@@ -44,6 +44,24 @@ h1 {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
+.controls-container {
+  display: flex;
+  flex-direction: column;
+  margin-top: 20px;
+  align-items: center;
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.rotation-input,
+.font-size-input {
+  padding: 5px;
+  width: 120px;
+}
 .remove-image-button {
   position: absolute;
   top: -10px;
@@ -53,25 +71,6 @@ h1 {
   border: none;
   padding: 2px 5px;
   cursor: pointer;
-}
-
-.remove-image-button:hover {
-  background-color: #ff1a1a;
-}
-
-.controls {
-  display: flex;
-  flex-direction: column;
-  position: absolute;
-  top: -10px;
-  right: -40px;
-  z-index: 10;
-}
-.rotation-input,
-.font-size-input {
-  margin: 5px 0;
-  padding: 5px;
-  width: 90px;
 }
 select {
   padding: 5px;

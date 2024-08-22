@@ -9,7 +9,6 @@ import JsBarcode from "jsbarcode";
 
 const AMIRI_BASE64 = base64String.trim();
 
-
 // Add Amiri font to jsPDF
 const addAmiriFont = (pdf) => {
   pdf.addFileToVFS("fonts/Amiri.ttf", AMIRI_BASE64);
@@ -203,6 +202,7 @@ const App = () => {
       },
     }));
   };
+
   const resetLayout = () => {
     if (window.confirm("Are you sure you want to reset the layout? This action cannot be undone.")) {
       setPositions({});
@@ -216,66 +216,65 @@ const App = () => {
       setPdfReady(false);
     }
   };
-  
-  
-const exportToPDF = () => {
-  const pdf = new jsPDF({
-    unit: "px",
-    format: [794, 1123], // A4 size in pixels
-  });
-  addAmiriFont(pdf); // Add Amiri font to PDF
-  pdf.setFont("Amiri"); // Set default font to Amiri
 
-  rows.forEach((row, rowIndex) => {
-    uploadedImages.forEach((imageSrc, index) => {
-      const size = imageSizes[index] || { width: "100px", height: "100px" };
-      pdf.addImage(
-        imageSrc,
-        "PNG",
-        parseFloat(imagePositions[index]?.x || 0),
-        parseFloat(imagePositions[index]?.y || 0),
-        parseFloat(size.width),
-        parseFloat(size.height)
-      );
+  const exportToPDF = () => {
+    const pdf = new jsPDF({
+      unit: "px",
+      format: [794, 1123], // A4 size in pixels
     });
+    addAmiriFont(pdf); // Add Amiri font to PDF
+    pdf.setFont("Amiri"); // Set default font to Amiri
 
-    headers.forEach((header) => {
-      const position = positions[header] || { x: 50, y: 50 };
-      const rotation = rotations[header] || 0;
-      const fontFamily = fontFamilies[header] || "Amiri";
-      const fontSize = fontSizes[header] || 16;
-
-      pdf.setFont(fontFamily);
-      pdf.setFontSize(fontSize);
-
-      if (header === "barcode" && row[header]) {
-        // Create a canvas to draw the barcode
-        const canvas = document.createElement("canvas");
-        JsBarcode(canvas, row[header], { format: "CODE128" });
-
-        // Convert the canvas to an image and add it to the PDF
-        const barcodeImage = canvas.toDataURL("image/png");
+    rows.forEach((row, rowIndex) => {
+      uploadedImages.forEach((imageSrc, index) => {
+        const size = imageSizes[index] || { width: "100px", height: "100px" };
         pdf.addImage(
-          barcodeImage,
+          imageSrc,
           "PNG",
-          position.x,
-          position.y,
-          100, // Set width of the barcode
-          50 // Set height of the barcode
+          parseFloat(imagePositions[index]?.x || 0),
+          parseFloat(imagePositions[index]?.y || 0),
+          parseFloat(size.width),
+          parseFloat(size.height)
         );
-      } else {
-        const text = `${header}: ${row[header] || ""}`;
-        pdf.text(text, position.x, position.y, { angle: rotation });
+      });
+
+      headers.forEach((header) => {
+        const position = positions[header] || { x: 50, y: 50 };
+        const rotation = rotations[header] || 0;
+        const fontFamily = fontFamilies[header] || "Amiri";
+        const fontSize = fontSizes[header] || 16;
+
+        pdf.setFont(fontFamily);
+        pdf.setFontSize(fontSize);
+
+        if (header === "barcode" && row[header]) {
+          // Create a canvas to draw the barcode
+          const canvas = document.createElement("canvas");
+          JsBarcode(canvas, row[header], { format: "CODE128" });
+
+          // Convert the canvas to an image and add it to the PDF
+          const barcodeImage = canvas.toDataURL("image/png");
+          pdf.addImage(
+            barcodeImage,
+            "PNG",
+            position.x,
+            position.y,
+            100, // Set width of the barcode
+            50 // Set height of the barcode
+          );
+        } else {
+          const text = `${header}: ${row[header] || ""}`;
+          pdf.text(text, position.x, position.y, { angle: rotation });
+        }
+      });
+
+      if (rowIndex < rows.length - 1) {
+        pdf.addPage();
       }
     });
 
-    if (rowIndex < rows.length - 1) {
-      pdf.addPage();
-    }
-  });
-
-  pdf.save("download.pdf");
-};
+    pdf.save("download.pdf");
+  };
 
   const saveSettings = () => {
     const settings = {
@@ -284,6 +283,8 @@ const exportToPDF = () => {
       uploadedImages,
       imagePositions,
       imageSizes,
+      fontFamilies,
+      fontSizes
     };
     localStorage.setItem("layoutSettings", JSON.stringify(settings));
   };
@@ -291,12 +292,22 @@ const exportToPDF = () => {
   const loadSettings = () => {
     const savedSettings = localStorage.getItem("layoutSettings");
     if (savedSettings) {
-      const { positions, rotations, uploadedImages, imagePositions, imageSizes } = JSON.parse(savedSettings);
+      const {
+        positions,
+        rotations,
+        uploadedImages,
+        imagePositions,
+        imageSizes,
+        fontFamilies,
+        fontSizes
+      } = JSON.parse(savedSettings);
       setPositions(positions || {});
       setRotations(rotations || {});
       setUploadedImages(uploadedImages || []);
       setImagePositions(imagePositions || {});
       setImageSizes(imageSizes || {});
+      setFontFamilies(fontFamilies || {});
+      setFontSizes(fontSizes || {});
     }
   };
 

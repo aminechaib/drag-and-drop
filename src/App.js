@@ -1,24 +1,108 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Draggable from 'react-draggable';
 import { Resizable } from 're-resizable';
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
+import { debounce } from 'lodash';
 import './App.css';
 
-const fonts = ['Arial', 'Verdana', 'Times New Roman', 'Courier New', 'Georgia', 'Amiri'];
+const HeaderItem = ({
+  header, position, rotation, onHeaderClick, onDragStop, onRotationChange,
+  isSelected, fontFamily, fontSize, onFontFamilyChange, onFontSizeChange
+}) => (
+  <div
+    onClick={() => onHeaderClick(header)}
+    style={{
+      position: 'relative',
+      border: isSelected ? '2px solid red' : 'none',
+      cursor: 'pointer',
+    }}
+  >
+    <Draggable
+      onStop={(e, data) => onDragStop(e, data, header)}
+      defaultPosition={position || { x: 0, y: 0 }}
+    >
+      <div
+        className="draggable-item"
+        style={{
+          transform: `rotate(${rotation || 0}deg)`,
+          fontFamily: fontFamily || 'Arial',
+          fontSize: fontSize || '16px',
+        }}
+      >
+        {header}
+      </div>
+    </Draggable>
+    {isSelected && (
+      <div className="controls">
+        <input
+          type="number"
+          value={rotation || 0}
+          onChange={(e) => onRotationChange(parseFloat(e.target.value), header)}
+          className="rotation-input"
+          placeholder="Rotation (deg)"
+        />
+        <select
+          value={fontFamily || 'Arial'}
+          onChange={(e) => onFontFamilyChange(e.target.value, header)}
+        >
+          <option value="Arial">Arial</option>
+          <option value="Times New Roman">Times New Roman</option>
+          <option value="Courier New">Courier New</option>
+          <option value="Georgia">Georgia</option>
+          {/* Add more font options here */}
+        </select>
+        <input
+          type="number"
+          value={fontSize || 16}
+          onChange={(e) => onFontSizeChange(parseFloat(e.target.value), header)}
+          className="font-size-input"
+          placeholder="Font Size (px)"
+        />
+      </div>
+    )}
+  </div>
+);
+
+const UploadedImage = ({ index, imageSrc, position, size, onDragStop, onResize, onRemove }) => (
+  <Draggable
+    key={index}
+    onStop={(e, data) => onDragStop(e, data, index)}
+    defaultPosition={position || { x: 0, y: 0 }}
+  >
+    <Resizable
+      size={size || { width: '100px', height: '100px' }}
+      onResizeStop={(e, direction, ref) => onResize(e, direction, ref, index)}
+    >
+      <div style={{ position: 'relative' }}>
+        <img
+          src={imageSrc}
+          alt={`uploaded-${index}`}
+          className="uploaded-image"
+        />
+        <button
+          onClick={() => onRemove(index)}
+          className="remove-image-button"
+        >
+          Remove
+        </button>
+      </div>
+    </Resizable>
+  </Draggable>
+);
 
 const App = () => {
   const [headers, setHeaders] = useState([]);
   const [rows, setRows] = useState([]);
   const [positions, setPositions] = useState({});
   const [rotations, setRotations] = useState({});
-  const [fontFamilies, setFontFamilies] = useState({});
-  const [fontSizes, setFontSizes] = useState({});
   const [selectedHeader, setSelectedHeader] = useState(null);
   const [uploadedImages, setUploadedImages] = useState([]);
   const [imagePositions, setImagePositions] = useState({});
   const [imageSizes, setImageSizes] = useState({});
   const [pdfReady, setPdfReady] = useState(false);
+  const [fontFamilies, setFontFamilies] = useState({});
+  const [fontSizes, setFontSizes] = useState({});
 
   useEffect(() => {
     loadSettings();
@@ -30,20 +114,38 @@ const App = () => {
       const reader = new FileReader();
       reader.onload = (e) => {
         const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(sheet);
+        try {
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[sheetName];
+          const jsonData = XLSX.utils.sheet_to_json(sheet);
 
-        if (jsonData.length > 0) {
-          const headers = Object.keys(jsonData[0]);
-          setHeaders(headers);
-          setRows(jsonData);
-          setPdfReady(true);
+          if (jsonData.length > 0) {
+            const headers = Object.keys(jsonData[0]);
+            setHeaders(headers);
+            setRows(jsonData);
+            setPdfReady(true);
+          }
+        } catch (error) {
+          alert('Error reading Excel file. Please ensure the file is in correct format.');
         }
       };
       reader.readAsArrayBuffer(file);
     }
+  };
+
+  const handleFontFamilyChange = (fontFamily, header) => {
+    setFontFamilies((prevFamilies) => ({
+      ...prevFamilies,
+      [header]: fontFamily,
+    }));
+  };
+
+  const handleFontSizeChange = (fontSize, header) => {
+    setFontSizes((prevSizes) => ({
+      ...prevSizes,
+      [header]: fontSize,
+    }));
   };
 
   const handleDragStop = (e, data, header) => {
@@ -53,52 +155,33 @@ const App = () => {
     }));
   };
 
-  const handleRotationChange = (angle) => {
-    if (selectedHeader) {
+  const handleRotationChange = useCallback(
+    debounce((angle, header) => {
       setRotations((prevRotations) => ({
         ...prevRotations,
-        [selectedHeader]: angle,
+        [header]: angle,
       }));
-    }
-  };
-
-  const handleFontFamilyChange = (fontFamily) => {
-    if (selectedHeader) {
-      setFontFamilies((prevFontFamilies) => ({
-        ...prevFontFamilies,
-        [selectedHeader]: fontFamily,
-      }));
-    }
-  };
-
-  const handleFontSizeChange = (fontSize) => {
-    if (selectedHeader) {
-      setFontSizes((prevFontSizes) => ({
-        ...prevFontSizes,
-        [selectedHeader]: fontSize,
-      }));
-    }
-  };
+    }, 200),
+    []
+  );
 
   const handleHeaderClick = (header) => {
     setSelectedHeader(header === selectedHeader ? null : header);
   };
 
   const handleImageUpload = (event) => {
-    const files = event.target.files;
-    const newImages = [];
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
+    const files = Array.from(event.target.files);
+    const newImages = files.map((file) => {
       const reader = new FileReader();
-      reader.onload = (e) => {
-        newImages.push(e.target.result);
-        if (newImages.length === files.length) {
-          setUploadedImages((prevImages) => [...prevImages, ...newImages]);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
+      return new Promise((resolve) => {
+        reader.onload = (e) => resolve(e.target.result);
+        reader.readAsDataURL(file);
+      });
+    });
+
+    Promise.all(newImages).then((imageSources) => {
+      setUploadedImages((prevImages) => [...prevImages, ...imageSources]);
+    });
   };
 
   const handleImageRemove = (index) => {
@@ -132,17 +215,24 @@ const App = () => {
     });
   
     rows.forEach((row, rowIndex) => {
-      // Add the custom font to the PDF
-      pdf.addFileToVFS('Amiri.ttf', /* Your base64 encoded font data here */);
-      pdf.addFont('fonts/Amiri.ttf', 'Amiri', 'normal');
+      uploadedImages.forEach((imageSrc, index) => {
+        const size = imageSizes[index] || { width: '100px', height: '100px' };
+        pdf.addImage(
+          imageSrc,
+          'PNG',
+          parseFloat(imagePositions[index]?.x || 0),
+          parseFloat(imagePositions[index]?.y || 0),
+          parseFloat(size.width),
+          parseFloat(size.height)
+        );
+      });
   
-      // Add text with the custom font
       headers.forEach((header) => {
-        const position = positions[header] || { x: 50, y: 50 }; // Default position
+        const position = positions[header] || { x: 50, y: 50 };
         const rotation = rotations[header] || 0;
-        const fontFamily = fontFamilies[header] || 'Arial';
-        const fontSize = fontSizes[header] || 12;
         const text = `${header}: ${row[header] || ''}`;
+        const fontFamily = fontFamilies[header] || 'Arial';
+        const fontSize = fontSizes[header] || 16;
   
         pdf.setFont(fontFamily);
         pdf.setFontSize(fontSize);
@@ -153,17 +243,19 @@ const App = () => {
         pdf.addPage();
       }
     });
+  
     pdf.save('download.pdf');
   };
+  
   const saveSettings = () => {
     const settings = {
       positions,
       rotations,
-      fontFamilies,
-      fontSizes,
       uploadedImages,
       imagePositions,
       imageSizes,
+      fontFamilies,
+      fontSizes,
     };
     localStorage.setItem('layoutSettings', JSON.stringify(settings));
   };
@@ -171,16 +263,14 @@ const App = () => {
   const loadSettings = () => {
     const savedSettings = localStorage.getItem('layoutSettings');
     if (savedSettings) {
-      const { positions, rotations, fontFamilies, fontSizes, uploadedImages, imagePositions, imageSizes } = JSON.parse(
-        savedSettings
-      );
+      const { positions, rotations, uploadedImages, imagePositions, imageSizes, fontFamilies, fontSizes } = JSON.parse(savedSettings);
       setPositions(positions);
       setRotations(rotations);
-      setFontFamilies(fontFamilies || {});
-      setFontSizes(fontSizes || {});
       setUploadedImages(uploadedImages || []);
       setImagePositions(imagePositions || {});
       setImageSizes(imageSizes || {});
+      setFontFamilies(fontFamilies || {});
+      setFontSizes(fontSizes || {});
     }
   };
 
@@ -194,101 +284,44 @@ const App = () => {
           {headers.length > 0 && (
             <div className="draggable-container">
               {headers.map((header) => (
-                <div
+                <HeaderItem
                   key={header}
-                  onClick={() => handleHeaderClick(header)}
-                  style={{
-                    position: 'relative',
-                    border: selectedHeader === header ? '2px solid red' : 'none',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <Draggable
-                    onStop={(e, data) => handleDragStop(e, data, header)}
-                    defaultPosition={positions[header] || { x: 0, y: 0 }}
-                  >
-                    <div
-                      className="draggable-item"
-                      style={{
-                        transform: `rotate(${rotations[header] || 0}deg)`,
-                        fontFamily: fontFamilies[header] || 'Arial',
-                        fontSize: `${fontSizes[header] || 12}px`,
-                      }}
-                    >
-                      {header}
-                    </div>
-                  </Draggable>
-                </div>
+                  header={header}
+                  position={positions[header]}
+                  rotation={rotations[header]}
+                  onHeaderClick={handleHeaderClick}
+                  onDragStop={handleDragStop}
+                  onRotationChange={handleRotationChange}
+                  isSelected={selectedHeader === header}
+                  fontFamily={fontFamilies[header]}
+                  fontSize={fontSizes[header]}
+                  onFontFamilyChange={handleFontFamilyChange}
+                  onFontSizeChange={handleFontSizeChange}
+                />
               ))}
             </div>
           )}
+
           {uploadedImages.map((imageSrc, index) => (
-            <Draggable
+            <UploadedImage
               key={index}
-              onStop={(e, data) => {
-                setImagePositions(prevPositions => ({
+              index={index}
+              imageSrc={imageSrc}
+              position={imagePositions[index]}
+              size={imageSizes[index]}
+              onDragStop={(e, data) =>
+                setImagePositions((prevPositions) => ({
                   ...prevPositions,
                   [index]: { x: data.x, y: data.y },
-                }));
-              }}
-              defaultPosition={imagePositions[index] || { x: 0, y: 0 }}
-            >
-              <Resizable
-                size={imageSizes[index] || { width: '100px', height: '100px' }}
-                onResizeStop={(e, direction, ref) => handleResize(e, direction, ref, index)}
-              >
-                <div style={{ position: 'relative' }}>
-                  <img
-                    src={imageSrc}
-                    alt={`uploaded-${index}`}
-                    className="uploaded-image"
-                  />
-                  <button
-                    className="remove-image-button"
-                    onClick={() => handleImageRemove(index)}
-                  >
-                    Remove
-                  </button>
-                </div>
-              </Resizable>
-            </Draggable>
+                }))
+              }
+              onResize={handleResize}
+              onRemove={handleImageRemove}
+            />
           ))}
         </div>
-        {selectedHeader && (
-          <div className="header-settings">
-            <input
-              type="number"
-              onChange={(e) => handleRotationChange(parseFloat(e.target.value))}
-              className="rotation-input"
-              placeholder="Rotation (deg)"
-            />
-            <select
-              onChange={(e) => handleFontFamilyChange(e.target.value)}
-              defaultValue={fontFamilies[selectedHeader] || 'Arial'}
-            >
-              {fonts.map((font) => (
-                <option key={font} value={font}>{font}</option>
-              ))}
-            </select>
-            <input
-              type="number"
-              onChange={(e) => handleFontSizeChange(parseFloat(e.target.value))}
-              className="font-size-input"
-              placeholder="Font Size (px)"
-              defaultValue={fontSizes[selectedHeader] || 12}
-            />
-          </div>
-        )}
-        {pdfReady && (
-          <div>
-            <button onClick={exportToPDF} className="export-button">
-              Export to PDF
-            </button>
-            <button onClick={saveSettings} className="save-button">
-              Save Layout
-            </button>
-          </div>
-        )}
+        {pdfReady && <button onClick={exportToPDF}>Export to PDF</button>}
+        <button onClick={saveSettings}>Save Layout</button>
       </header>
     </div>
   );

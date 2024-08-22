@@ -203,6 +203,21 @@ const App = () => {
       },
     }));
   };
+  const resetLayout = () => {
+    if (window.confirm("Are you sure you want to reset the layout? This action cannot be undone.")) {
+      setPositions({});
+      setRotations({});
+      setUploadedImages([]);
+      setImagePositions({});
+      setImageSizes({});
+      setFontFamilies({});
+      setFontSizes({});
+      localStorage.removeItem("layoutSettings");
+      setPdfReady(false);
+    }
+  };
+  
+  
 const exportToPDF = () => {
   const pdf = new jsPDF({
     unit: "px",
@@ -290,6 +305,7 @@ const exportToPDF = () => {
       <h1>Excel to PDF Layout Tool</h1>
       <input type="file" onChange={handleFileUpload} accept=".xls, .xlsx" />
       <button onClick={saveSettings}>Save Layout</button>
+      <button onClick={resetLayout}>Reset Layout</button>
       <button onClick={exportToPDF} disabled={!pdfReady}>
         Export to PDF
       </button>

@@ -4,9 +4,11 @@ import Draggable from "react-draggable";
 import { Resizable } from "re-resizable";
 import * as XLSX from "xlsx";
 import "./App.css";
+import base64String from './fonts/Amiri.txt';
 
-// Base64 string for Amiri font (you should replace this with your actual Base64 string)
-const AMIRI_BASE64 = "font/Amiri.txt";
+const AMIRI_BASE64 = base64String.trim();
+
+
 // Add Amiri font to jsPDF
 const addAmiriFont = (pdf) => {
   pdf.addFileToVFS("fonts/Amiri.ttf", AMIRI_BASE64);

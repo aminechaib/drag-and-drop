@@ -49,30 +49,32 @@ const HeaderItem = ({
       </div>
     </Draggable>
     {isSelected && (
-      <div className="controls">
-        <input
-          type="number"
-          value={rotation || 0}
-          onChange={(e) => onRotationChange(parseFloat(e.target.value), header)}
-          className="rotation-input"
-          placeholder="Rotation (deg)"
-        />
-        <select value={fontFamily || "Arial"} onChange={(e) => onFontFamilyChange(e.target.value, header)}>
-          <option value="Arial">Arial</option>
-          <option value="Times New Roman">Times New Roman</option>
-          <option value="Courier New">Courier New</option>
-          <option value="Georgia">Georgia</option>
-          <option value="Amiri">Amiri</option> {/* Include Amiri in the font list */}
-        </select>
-        <input
-          type="number"
-          value={fontSize || 16}
-          onChange={(e) => onFontSizeChange(parseFloat(e.target.value), header)}
-          className="font-size-input"
-          placeholder="Font Size (px)"
-        />
-      </div>
-    )}
+  <div className="controls-container">
+    <div className="controls">
+      <input
+        type="number"
+        value={rotation || 0}
+        onChange={(e) => onRotationChange(parseFloat(e.target.value), header)}
+        className="rotation-input"
+        placeholder="Rotation (deg)"
+      />
+      <select value={fontFamily || "Arial"} onChange={(e) => onFontFamilyChange(e.target.value, header)}>
+        <option value="Arial">Arial</option>
+        <option value="Times New Roman">Times New Roman</option>
+        <option value="Courier New">Courier New</option>
+        <option value="Georgia">Georgia</option>
+        <option value="Amiri">Amiri</option>
+      </select>
+      <input
+        type="number"
+        value={fontSize || 16}
+        onChange={(e) => onFontSizeChange(parseFloat(e.target.value), header)}
+        className="font-size-input"
+        placeholder="Font Size (px)"
+      />
+    </div>
+  </div>
+)}
   </div>
 );
 
@@ -220,7 +222,7 @@ const App = () => {
   const exportToPDF = () => {
     const pdf = new jsPDF({
       unit: "px",
-      format: [794, 1123], // A4 size in pixels
+      format: [180, 180], // A4 size in pixels
     });
     addAmiriFont(pdf); // Add Amiri font to PDF
     pdf.setFont("Amiri"); // Set default font to Amiri

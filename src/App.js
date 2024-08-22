@@ -1,33 +1,46 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import Draggable from 'react-draggable';
-import { Resizable } from 're-resizable';
-import jsPDF from 'jspdf';
-import * as XLSX from 'xlsx';
-import { debounce } from 'lodash';
-import './App.css';
+import React, { useState, useEffect } from "react";
+import { jsPDF } from "jspdf";
+import Draggable from "react-draggable";
+import { Resizable } from "re-resizable";
+import * as XLSX from "xlsx";
+import "./App.css";
+
+// Base64 string for Amiri font (you should replace this with your actual Base64 string)
+const AMIRI_BASE64 = "font/Amiri.txt";
+// Add Amiri font to jsPDF
+const addAmiriFont = (pdf) => {
+  pdf.addFileToVFS("fonts/Amiri.ttf", AMIRI_BASE64);
+  pdf.addFont("fonts/Amiri.ttf", "Amiri", "normal");
+};
 
 const HeaderItem = ({
-  header, position, rotation, onHeaderClick, onDragStop, onRotationChange,
-  isSelected, fontFamily, fontSize, onFontFamilyChange, onFontSizeChange
+  header,
+  position,
+  rotation,
+  onHeaderClick,
+  onDragStop,
+  onRotationChange,
+  isSelected,
+  fontFamily,
+  fontSize,
+  onFontFamilyChange,
+  onFontSizeChange,
 }) => (
   <div
     onClick={() => onHeaderClick(header)}
     style={{
-      position: 'relative',
-      border: isSelected ? '2px solid red' : 'none',
-      cursor: 'pointer',
+      position: "relative",
+      border: isSelected ? "2px solid red" : "none",
+      cursor: "pointer",
     }}
   >
-    <Draggable
-      onStop={(e, data) => onDragStop(e, data, header)}
-      defaultPosition={position || { x: 0, y: 0 }}
-    >
+    <Draggable onStop={(e, data) => onDragStop(e, data, header)} defaultPosition={position || { x: 0, y: 0 }}>
       <div
         className="draggable-item"
         style={{
           transform: `rotate(${rotation || 0}deg)`,
-          fontFamily: fontFamily || 'Arial',
-          fontSize: fontSize || '16px',
+          fontFamily: fontFamily || "Arial",
+          fontSize: fontSize || "16px",
         }}
       >
         {header}
@@ -42,15 +55,12 @@ const HeaderItem = ({
           className="rotation-input"
           placeholder="Rotation (deg)"
         />
-        <select
-          value={fontFamily || 'Arial'}
-          onChange={(e) => onFontFamilyChange(e.target.value, header)}
-        >
+        <select value={fontFamily || "Arial"} onChange={(e) => onFontFamilyChange(e.target.value, header)}>
           <option value="Arial">Arial</option>
           <option value="Times New Roman">Times New Roman</option>
           <option value="Courier New">Courier New</option>
           <option value="Georgia">Georgia</option>
-          {/* Add more font options here */}
+          <option value="Amiri">Amiri</option> {/* Include Amiri in the font list */}
         </select>
         <input
           type="number"
@@ -65,25 +75,11 @@ const HeaderItem = ({
 );
 
 const UploadedImage = ({ index, imageSrc, position, size, onDragStop, onResize, onRemove }) => (
-  <Draggable
-    key={index}
-    onStop={(e, data) => onDragStop(e, data, index)}
-    defaultPosition={position || { x: 0, y: 0 }}
-  >
-    <Resizable
-      size={size || { width: '100px', height: '100px' }}
-      onResizeStop={(e, direction, ref) => onResize(e, direction, ref, index)}
-    >
-      <div style={{ position: 'relative' }}>
-        <img
-          src={imageSrc}
-          alt={`uploaded-${index}`}
-          className="uploaded-image"
-        />
-        <button
-          onClick={() => onRemove(index)}
-          className="remove-image-button"
-        >
+  <Draggable key={index} onStop={(e, data) => onDragStop(e, data, index)} defaultPosition={position || { x: 0, y: 0 }}>
+    <Resizable size={size || { width: "100px", height: "100px" }} onResizeStop={(e, direction, ref) => onResize(e, direction, ref, index)}>
+      <div style={{ position: "relative" }}>
+        <img src={imageSrc} alt={`uploaded-${index}`} className="uploaded-image" />
+        <button onClick={() => onRemove(index)} className="remove-image-button">
           Remove
         </button>
       </div>
@@ -115,7 +111,7 @@ const App = () => {
       reader.onload = (e) => {
         const data = new Uint8Array(e.target.result);
         try {
-          const workbook = XLSX.read(data, { type: 'array' });
+          const workbook = XLSX.read(data, { type: "array" });
           const sheetName = workbook.SheetNames[0];
           const sheet = workbook.Sheets[sheetName];
           const jsonData = XLSX.utils.sheet_to_json(sheet);
@@ -127,7 +123,7 @@ const App = () => {
             setPdfReady(true);
           }
         } catch (error) {
-          alert('Error reading Excel file. Please ensure the file is in correct format.');
+          alert("Error reading Excel file. Please ensure the file is in correct format.");
         }
       };
       reader.readAsArrayBuffer(file);
@@ -155,15 +151,12 @@ const App = () => {
     }));
   };
 
-  const handleRotationChange = useCallback(
-    debounce((angle, header) => {
-      setRotations((prevRotations) => ({
-        ...prevRotations,
-        [header]: angle,
-      }));
-    }, 200),
-    []
-  );
+  const handleRotationChange = (angle, header) => {
+    setRotations((prevRotations) => ({
+      ...prevRotations,
+      [header]: angle,
+    }));
+  };
 
   const handleHeaderClick = (header) => {
     setSelectedHeader(header === selectedHeader ? null : header);
@@ -210,43 +203,45 @@ const App = () => {
 
   const exportToPDF = () => {
     const pdf = new jsPDF({
-      unit: 'px',
+      unit: "px",
       format: [794, 1123], // A4 size in pixels
     });
-  
+    addAmiriFont(pdf); // Add Amiri font to PDF
+    pdf.setFont("Amiri"); // Set default font to Amiri
+
     rows.forEach((row, rowIndex) => {
       uploadedImages.forEach((imageSrc, index) => {
-        const size = imageSizes[index] || { width: '100px', height: '100px' };
+        const size = imageSizes[index] || { width: "100px", height: "100px" };
         pdf.addImage(
           imageSrc,
-          'PNG',
+          "PNG",
           parseFloat(imagePositions[index]?.x || 0),
           parseFloat(imagePositions[index]?.y || 0),
           parseFloat(size.width),
           parseFloat(size.height)
         );
       });
-  
+
       headers.forEach((header) => {
         const position = positions[header] || { x: 50, y: 50 };
         const rotation = rotations[header] || 0;
-        const text = `${header}: ${row[header] || ''}`;
-        const fontFamily = fontFamilies[header] || 'Arial';
+        const text = `${header}: ${row[header] || ""}`;
+        const fontFamily = fontFamilies[header] || "Amiri";
         const fontSize = fontSizes[header] || 16;
-  
+
         pdf.setFont(fontFamily);
         pdf.setFontSize(fontSize);
         pdf.text(text, position.x, position.y, { angle: rotation });
       });
-  
+
       if (rowIndex < rows.length - 1) {
         pdf.addPage();
       }
     });
-  
-    pdf.save('download.pdf');
+
+    pdf.save("download.pdf");
   };
-  
+
   const saveSettings = () => {
     const settings = {
       positions,
@@ -254,75 +249,66 @@ const App = () => {
       uploadedImages,
       imagePositions,
       imageSizes,
-      fontFamilies,
-      fontSizes,
     };
-    localStorage.setItem('layoutSettings', JSON.stringify(settings));
+    localStorage.setItem("layoutSettings", JSON.stringify(settings));
   };
 
   const loadSettings = () => {
-    const savedSettings = localStorage.getItem('layoutSettings');
+    const savedSettings = localStorage.getItem("layoutSettings");
     if (savedSettings) {
-      const { positions, rotations, uploadedImages, imagePositions, imageSizes, fontFamilies, fontSizes } = JSON.parse(savedSettings);
-      setPositions(positions);
-      setRotations(rotations);
+      const { positions, rotations, uploadedImages, imagePositions, imageSizes } = JSON.parse(savedSettings);
+      setPositions(positions || {});
+      setRotations(rotations || {});
       setUploadedImages(uploadedImages || []);
       setImagePositions(imagePositions || {});
       setImageSizes(imageSizes || {});
-      setFontFamilies(fontFamilies || {});
-      setFontSizes(fontSizes || {});
     }
   };
 
   return (
     <div className="App">
-      <header className="App-header">
-        <h1>Upload Excel, Arrange, Rotate, Resize, and Save Layout</h1>
-        <input type="file" accept=".xlsx, .xls" onChange={handleFileUpload} />
-        <input type="file" accept="image/*" multiple onChange={handleImageUpload} />
-        <div id="a4-area" className="a4-area">
-          {headers.length > 0 && (
-            <div className="draggable-container">
-              {headers.map((header) => (
-                <HeaderItem
-                  key={header}
-                  header={header}
-                  position={positions[header]}
-                  rotation={rotations[header]}
-                  onHeaderClick={handleHeaderClick}
-                  onDragStop={handleDragStop}
-                  onRotationChange={handleRotationChange}
-                  isSelected={selectedHeader === header}
-                  fontFamily={fontFamilies[header]}
-                  fontSize={fontSizes[header]}
-                  onFontFamilyChange={handleFontFamilyChange}
-                  onFontSizeChange={handleFontSizeChange}
-                />
-              ))}
-            </div>
-          )}
-
-          {uploadedImages.map((imageSrc, index) => (
-            <UploadedImage
-              key={index}
-              index={index}
-              imageSrc={imageSrc}
-              position={imagePositions[index]}
-              size={imageSizes[index]}
-              onDragStop={(e, data) =>
-                setImagePositions((prevPositions) => ({
-                  ...prevPositions,
-                  [index]: { x: data.x, y: data.y },
-                }))
-              }
-              onResize={handleResize}
-              onRemove={handleImageRemove}
-            />
-          ))}
-        </div>
-        {pdfReady && <button onClick={exportToPDF}>Export to PDF</button>}
-        <button onClick={saveSettings}>Save Layout</button>
-      </header>
+      <h1>Excel to PDF Layout Tool</h1>
+      <input type="file" onChange={handleFileUpload} accept=".xls, .xlsx" />
+      <button onClick={saveSettings}>Save Layout</button>
+      <button onClick={exportToPDF} disabled={!pdfReady}>
+        Export to PDF
+      </button>
+      <input type="file" accept="image/*" onChange={handleImageUpload} multiple />
+      <div className="layout-area">
+        {headers.map((header) => (
+          <HeaderItem
+            key={header}
+            header={header}
+            position={positions[header]}
+            rotation={rotations[header]}
+            onHeaderClick={handleHeaderClick}
+            onDragStop={handleDragStop}
+            onRotationChange={handleRotationChange}
+            isSelected={header === selectedHeader}
+            fontFamily={fontFamilies[header]}
+            fontSize={fontSizes[header]}
+            onFontFamilyChange={handleFontFamilyChange}
+            onFontSizeChange={handleFontSizeChange}
+          />
+        ))}
+        {uploadedImages.map((imageSrc, index) => (
+          <UploadedImage
+            key={index}
+            index={index}
+            imageSrc={imageSrc}
+            position={imagePositions[index]}
+            size={imageSizes[index]}
+            onDragStop={(e, data) => {
+              setImagePositions((prevPositions) => ({
+                ...prevPositions,
+                [index]: { x: data.x, y: data.y },
+              }));
+            }}
+            onResize={handleResize}
+            onRemove={handleImageRemove}
+          />
+        ))}
+      </div>
     </div>
   );
 };
